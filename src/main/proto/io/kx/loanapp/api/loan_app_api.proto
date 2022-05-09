@@ -1,0 +1,94 @@
+// This is the public API offered by your entity.
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "kalix/annotations.proto";
+import "google/api/annotations.proto";
+
+package io.kx.loanapp.api;
+
+option java_outer_classname = "LoanAppApi";
+
+enum LoanAppStatus {
+  STATUS_UNKNOWN = 0;
+  STATUS_IN_REVIEW = 1;
+  STATUS_APPROVED = 2;
+  STATUS_DECLINED = 3;
+}
+
+message LoanAppState {
+  string client_id = 1;
+  int64 client_monthly_income_cents = 2;
+
+  int64 loan_amount_cents = 3;
+  int32 loan_duration_months = 4;
+
+  LoanAppStatus status = 5;
+
+  string decline_reason = 6;
+
+  google.protobuf.Timestamp last_update_timestamp = 7;
+}
+
+message SubmitCommand {
+  string loan_app_id = 1 [(kalix.field).entity_key = true];
+
+  string client_id = 2;
+  int64 client_monthly_income_cents = 6;
+
+  int64 loan_amount_cents = 7;
+  int32 loan_duration_months = 8;
+}
+
+message GetCommand {
+  string loan_app_id = 1 [(kalix.field).entity_key = true];
+}
+
+message ApproveCommand  {
+  string loan_app_id = 1 [(kalix.field).entity_key = true];
+}
+
+message DeclineCommand  {
+  string loan_app_id = 1 [(kalix.field).entity_key = true];
+  string reason = 2;
+}
+
+service LoanAppService {
+  option (kalix.codegen) = {
+    event_sourced_entity: {
+      name: "io.kx.loanapp.domain.LoanAppEntity"
+      entity_type: "loanapp"
+      state: "io.kx.loanapp.domain.LoanAppDomainState"
+      events: [
+        "io.kx.loanapp.domain.Submitted",
+        "io.kx.loanapp.domain.Approved",
+        "io.kx.loanapp.domain.Declined"
+      ]
+    }
+  };
+  rpc Submit(SubmitCommand) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/loanapp/{loan_app_id}"
+      body: "*"
+    };
+  }
+  rpc Get(GetCommand) returns (LoanAppState) {
+    option (google.api.http) = {
+      get: "/loanapp/{loan_app_id}"
+    };
+  }
+
+  rpc Approve(ApproveCommand) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/loanapp/{loan_app_id}/approve"
+    };
+  }
+
+  rpc Decline(DeclineCommand) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/loanapp/{loan_app_id}/decline"
+      body: "*"
+    };
+  }
+}

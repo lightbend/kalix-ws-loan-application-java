@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package io.kx.loanproc.domain;
+
+option java_outer_classname = "LoanProcDomain";
+
+enum LoanProcDomainStatus {
+  STATUS_UNKNOWN = 0;
+  STATUS_READY_FOR_REVIEW = 1;
+  STATUS_APPROVED = 2;
+  STATUS_DECLINED = 3;
+}
+
+message LoanProcDomainState {
+  string reviewer_id = 1;
+  LoanProcDomainStatus status = 2;
+  string decline_reason = 3;
+  google.protobuf.Timestamp last_update_timestamp = 4;
+}
+
+message ReadyForReview {
+  string loan_app_id = 1;
+  google.protobuf.Timestamp event_timestamp = 6;
+}
+
+message Approved {
+  string loan_app_id = 1;
+  string reviewer_id = 2;
+  google.protobuf.Timestamp event_timestamp = 3;
+}
+
+message Declined {
+  string loan_app_id = 1;
+  string reviewer_id = 2;
+  string reason = 3;
+  google.protobuf.Timestamp event_timestamp = 4;
+}

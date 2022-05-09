@@ -236,9 +236,7 @@ curl -XPUT https://<somehost>.kalix.app/loanapp/1/approve -H "Content-Type: appl
 # Loan application processing service
 
 ## Increment version
-In `pom.xml`:
-1. In `<version>1.0-SNAPSHOT</version>` replace `1.0-SNAPSHOT` with `1.1-SNAPSHOT`
-2. In `<dockerImage>my-docker-repo/${project.artifactId}</dockerImage>` replace `my-docker-repo` with the right `dockerId`
+In `pom.xml` in `<version>1.0-SNAPSHOT</version>` replace `1.0-SNAPSHOT` with `1.1-SNAPSHOT`
 
 ## Define API data structure and endpoints (GRPC)
 Create `io/kx/loanproc/api` folder in `src/main/proto` folder. <br>
@@ -393,4 +391,82 @@ curl -XGET https://<somehost>.kalix.app/loanproc/1 -H "Content-Type: application
 Approve:
 ```
 curl -XPUT https://<somehost>.kalix.app/loanproc/1/approve -H "Content-Type: application/json"
+```
+## Increment version
+In `pom.xml` in `<version>1.1-SNAPSHOT</version>` replace `1.1-SNAPSHOT` with `1.2-SNAPSHOT`
+
+## Create a view
+Create `io/kx/loanproc/view` folder in `src/main/proto` folder. <br>
+Create `loan_proc_by_status_view.proto` in `src/main/proto/io/kx/loanproc/view` folder. <br>
+Create: <br>
+- state
+- request/response
+- service
+
+<i><b>Note</b></i>: `SELECT` result alias `AS results` needs to correspond with `GetLoanProcByStatusResponse` parameter name `repeated LoanProcViewState results`<br>
+<i><b>Note</b></i>: Currently `enums` are not supported as query parameters ([issue 1141](https://github.com/lightbend/kalix-proxy/issues/1141)) so enum `number` value is used for query<br>
+<i><b>Tip</b></i>: Check content in `step-3` git branch
+
+## Compile maven project to trigger codegen for views
+```
+mvn compile
+```
+
+Compile will generate help classes (`target/generated-*` folders) and skeleton classes<br><br>
+
+`src/main/java/io/kx/loanproc/view/LoanProcByStatusView`<br>
+
+In `src/main/java/io/kx/Main` you need to add view (`LoanProcByStatusView`) initialization:
+```
+ return AkkaServerlessFactory.withComponents(LoanAppEntity::new, LoanProcEntity::new, LoanProcByStatusView::new);
+```
+
+## Implement view LoanProcByStatusView skeleton class
+Implement `src/main/java/io/kx/loanproc/view/LoanProcByStatusView` class<br>
+<i><b>Tip</b></i>: Check content in `step-3` git branch
+
+##Unit test
+
+Because of the nature of views only Integration tests are done.
+
+## Create integration tests for view
+1. Copy `io/kx/loanproc/view/LoanProcEntityIntegrationTest` class to `io/kx/loanproc/view/LoanProcViewIntegrationTest`
+2. Remove all methods annotated with `@Test`
+3. Add test case
+```
+@Test
+public void viewTest() throws Exception {
+...  
+```
+<i><b>Tip</b></i>: Check content in `step-3` git branch
+
+## Run integration test
+```
+mvn verify -Pit
+```
+
+<i><b>Note</b></i>: Integration tests uses [TestContainers](https://www.testcontainers.org/) to span integration environment so it could require some time to download required containers.
+Also make sure docker is running.
+
+
+## Package
+
+```
+mvn package
+```
+<br><br>
+
+Push docker image to docker repository:
+```
+mvn docker:push
+```
+## Deploy service
+```
+kalix service deploy loan-application my-docker-repo/loan-application:1.2-SNAPSHOT
+```
+
+## Test service in production
+Get loan processing by status:
+```
+curl -XPOST -d {"status_id":2} https://<somehost>.kalix.app/loanproc/views/by-status -H "Content-Type: application/json"
 ```

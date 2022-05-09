@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package io.kx.loanproc.view;
+
+import "google/api/annotations.proto";
+import "google/protobuf/any.proto";
+import "kalix/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+import "io/kx/loanproc/api/loan_proc_api.proto";
+import "io/kx/loanproc/domain/loan_proc_domain.proto";
+
+option java_outer_classname = "LoanProcByStatusModel";
+
+message LoanProcViewState {
+  int32 status_id = 1;
+  api.LoanProcStatus status = 2;
+  string loan_app_id = 3 ;
+  google.protobuf.Timestamp last_update_timestamp = 4;
+}
+
+message GetLoanProcByStatusRequest {
+  int32 status_id = 1;
+}
+
+message GetLoanProcByStatusResponse {
+  repeated LoanProcViewState results = 1;
+}
+
+service LoanProcByStatus {
+  option (kalix.codegen) = {
+    view: {}
+  };
+
+  rpc GetLoanAppsByStatus(GetLoanProcByStatusRequest) returns (GetLoanProcByStatusResponse) {
+    option (kalix.method).view.query = {
+      query: "SELECT * AS results"
+          "  FROM loan_proc_by_status"
+          " WHERE status_id = :status_id"
+    };
+    option (google.api.http) = {
+      post: "/loanproc/views/by-status",
+      body: "*"
+    };
+  }
+
+  rpc OnSubmitted(domain.ReadyForReview) returns (LoanProcViewState) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanproc"
+    };
+    option (kalix.method).view.update = {
+      table: "loan_proc_by_status"
+      transform_updates: true
+    };
+  }
+
+
+  rpc OnApproved(domain.Approved) returns (LoanProcViewState) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanproc"
+    };
+    option (kalix.method).view.update = {
+      table: "loan_proc_by_status"
+      transform_updates: true
+    };
+  }
+
+  rpc OnDeclined(domain.Declined) returns (LoanProcViewState) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanproc"
+    };
+    option (kalix.method).view.update = {
+      table: "loan_proc_by_status"
+      transform_updates: true
+    };
+  }
+
+  rpc IgnoreOtherEvents(google.protobuf.Any) returns (LoanProcViewState) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanproc"
+    };
+    option (kalix.method).view.update = {
+      table: "loan_proc_by_status"
+      transform_updates: true
+    };
+  }
+}

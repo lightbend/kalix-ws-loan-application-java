@@ -14,7 +14,7 @@ IDE / editor<br>
 
 ```
 mvn archetype:generate \
--DarchetypeGroupId=com.kalix \
+-DarchetypeGroupId=io.kalix \
 -DarchetypeArtifactId=kalix-maven-archetype \
 -DarchetypeVersion=LATEST
 ```
@@ -469,4 +469,97 @@ kalix service deploy loan-application my-docker-repo/loan-application:1.2-SNAPSH
 Get loan processing by status:
 ```
 curl -XPOST -d {"status_id":2} https://<somehost>.kalix.app/loanproc/views/by-status -H "Content-Type: application/json"
+```
+
+# Event driven communication
+
+## Increment version
+In `pom.xml` in `<version>1.2-SNAPSHOT</version>` replace `1.3-SNAPSHOT` with `1.3-SNAPSHOT`
+
+## Action for submitted event (Loan application service -> Loan application processing service)
+Create `io/kx/loanapp/action` folder in `src/main/proto` folder. <br>
+Create `loan_app_eventing_to_proc_action.proto` in `src/main/proto/io/kx/loanapp/action` folder. <br>
+Create: <br>
+- service
+
+<i><b>Tip</b></i>: Check content in `step-4` git branch
+
+## Action for approved & declined processing event (Loan application processing service -> Loan application service)
+Create `io/kx/loanproc/action` folder in `src/main/proto` folder. <br>
+Create `loan_proc_eventing_to_app_action.proto` in `src/main/proto/io/kx/loanproc/action` folder. <br>
+Create: <br>
+- service
+
+<i><b>Tip</b></i>: Check content in `step-4` git branch
+
+## Compile maven project to trigger codegen for action
+```
+mvn compile
+```
+Compile will generate help classes (`target/generated-*` folders) and skeleton classes<br><br>
+
+`src/main/java/io/kx/loanapp/action/LoanAppEventingToProcAction`<br>
+`src/main/java/io/kx/loanproc/action/LoanProcEventingToAppAction`<br>
+
+In `src/main/java/io/kx/Main` you need to add view (`LoanAppEventingToProcAction` & `LoanProcEventingToAppAction`) initialization:
+```
+ return AkkaServerlessFactory.withComponents(LoanAppEntity::new, LoanProcEntity::new, LoanAppEventingToProcAction::new, LoanProcByStatusView::new, LoanProcEventingToAppAction::new);
+```
+## Implement view LoanAppEventingToProcAction skeleton class
+Implement `src/main/java/io/kx/loanapp/action/LoanAppEventingToProcAction` class<br>
+<i><b>Tip</b></i>: Check content in `step-4` git branch
+
+## Implement view LoanProcEventingToAppAction skeleton class
+Implement `src/main/java/io/kx/loanproc/action/LoanProcEventingToAppAction` class<br>
+<i><b>Tip</b></i>: Check content in `step-4` git branch
+
+## System integration tests (multiple services)
+In `src/it/java/io/kx` folder create new class `SystemIntegrationTest`.
+<i><b>Tip</b></i>: Check content in `step-4` git branch
+
+## Run integration test
+```
+mvn verify -Pit
+```
+
+<i><b>Note</b></i>: Integration tests uses [TestContainers](https://www.testcontainers.org/) to span integration environment so it could require some time to download required containers.
+Also make sure docker is running.
+
+## Package
+
+```
+mvn package
+```
+
+<br><br>
+
+Push docker image to docker repository:
+```
+mvn docker:push
+```
+## Deploy service
+```
+kalix service deploy loan-application my-docker-repo/loan-application:1.3-SNAPSHOT
+```
+<i><b>Note</b></i>: Replace `my-docker-repo` with your docker repository
+
+## Test service in production
+Submit loan application:
+```
+curl -XPOST -d '{
+  "client_id": "123456",
+  "client_monthly_income_cents": 60000,
+  "loan_amount_cents": 20000,
+  "loan_duration_months": 12
+}' https://<somehost>.kalix.app/loanapp/2 -H "Content-Type: application/json"
+```
+Approve loan processing:
+```
+curl -XPUT -d '{
+"reviewer_id": "9999"
+}' https://<somehost>.kalix.app/loanproc/2/approve -H "Content-Type: application/json"
+```
+Get loan application :
+```
+curl -XGET https://<somehost>.kalix.app/loanapp/2 -H "Content-Type: application/json"
 ```

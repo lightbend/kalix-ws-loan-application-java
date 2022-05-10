@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package io.kx.loanapp.action;
+
+import "google/api/annotations.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "kalix/annotations.proto";
+
+import "io/kx/loanapp/domain/loan_app_domain.proto";
+
+option java_outer_classname = "LoanAppEventingToProcHandler";
+
+service LoanAppEventingToProc {
+  option (kalix.codegen) = {
+    action: {}
+  };
+
+  rpc OnSubmitted(domain.Submitted) returns (google.protobuf.Empty) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanapp"
+    };
+  }
+
+  rpc IgnoreOtherEvents(google.protobuf.Any) returns (google.protobuf.Empty) {
+    option (kalix.method).eventing.in = {
+      event_sourced_entity: "loanapp"
+    };
+  }
+}

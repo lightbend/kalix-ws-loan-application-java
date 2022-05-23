@@ -14,7 +14,7 @@ IDE / editor<br>
 
 ```
 mvn archetype:generate \
--DarchetypeGroupId=com.kalix \
+-DarchetypeGroupId=io.kalix \
 -DarchetypeArtifactId=kalix-maven-archetype \
 -DarchetypeVersion=LATEST
 ```
